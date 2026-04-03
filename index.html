@@ -184,44 +184,44 @@ function getTheme() { return themes[currentThemeIdx]; }
 const isVN = (navigator.language || '').startsWith('vi');
 
 const lang = {
-    play: isVN ? 'CHOI NGAY' : 'PLAY NOW',
-    shop: isVN ? 'CUA HANG' : 'SHOP',
-    tapToPlay: isVN ? 'Cham de choi | Space/Up' : 'Tap to play | Space/Up',
-    record: isVN ? 'Ky luc' : 'Record',
+    play: isVN ? 'CHƠI NGAY' : 'PLAY NOW',
+    shop: isVN ? '🐒 CỬA HÀNG' : '🐒 SHOP',
+    tapToPlay: isVN ? 'Chạm để chơi | Space/↑' : 'Tap to play | Space/↑',
+    record: isVN ? 'Kỷ lục' : 'Record',
     gameOver: 'GAME OVER',
-    score: isVN ? 'Diem' : 'Score',
-    best: isVN ? 'Ky luc' : 'Best',
-    retry: isVN ? 'CHOI LAI' : 'PLAY AGAIN',
-    share: isVN ? 'CHIA SE THACH BAN BE' : 'SHARE & CHALLENGE',
-    menu: 'Menu',
+    score: isVN ? 'Điểm' : 'Score',
+    best: isVN ? 'Kỷ lục' : 'Best',
+    retry: isVN ? 'CHƠI LẠI' : 'PLAY AGAIN',
+    share: isVN ? '📤 CHIA SẺ THÁCH BẠN BÈ' : '📤 SHARE & CHALLENGE',
+    menu: '🏠 Menu',
     died: isVN
-        ? () => ['Cay the nho', 'VCL...', 'Buc the nho', 'Noob qua ban oi', 'E e chet roi kia', 'Skill issue day', 'Dua a?', 'Yeu vay?', 'Thu lai di ku', 'Tay run a?', 'Mat o dau vay?', 'Choi nhu bot', 'Rang len ban oi', 'F trong chat'][Math.floor(Math.random() * 14)]
-        : () => ['Ouch!', 'RIP', 'So close!', 'Noob alert', 'Wasted!', 'Skill issue', 'Bruh...', 'That weak?', 'Try again!', 'Shaky hands?', 'Eyes where?', 'Playing like a bot', 'Keep trying!', 'F'][Math.floor(Math.random() * 14)],
-    reviveBtn: isVN ? 'XEM VIDEO DE HOI SINH' : 'WATCH AD TO REVIVE',
-    skip: isVN ? 'BO QUA' : 'SKIP',
-    revived: isVN ? 'HOI SINH!' : 'REVIVED!',
-    nearRecord: (n) => isVN ? `Con ${n} diem pha ky luc!` : `${n} more to beat record!`,
-    newRecord: isVN ? 'KY LUC MOI!' : 'NEW RECORD!',
-    newRecordGO: isVN ? 'KY LUC MOI!' : 'NEW RECORD!',
-    milestone: (n) => isVN ? `Milestone ${n}!` : `Milestone ${n}!`,
-    target: (n) => isVN ? `Muc tieu: ${n}` : `Target: ${n}`,
-    nextTarget: (n) => isVN ? `Muc tieu tiep: ${n} diem = +${n} banana` : `Next: ${n} pts = +${n} banana`,
-    total: (n) => isVN ? `Tong: ${n}` : `Total: ${n}`,
-    using: isVN ? 'Dang dung' : 'Equipped',
+        ? () => ['Cay thế nhở 🥲', 'VCL... 💀', 'Bực thế nhở 😤', 'Noob quá bạn ơi 🤡', 'Ê ê chết rồi kìa 😂', 'Skill issue đấy 💅', 'Đùa à? 🫠', 'Yếu vậy? 😏', 'Thử lại đi ku 🐒', 'Tay run à? 🤣', 'Mắt ở đâu vậy? 👀', 'Chơi như bot 🤖', 'Ráng lên bạn ơi 😅', 'F trong chat 🫡'][Math.floor(Math.random() * 14)]
+        : () => ['Ouch! 🥲', 'RIP 💀', 'So close! 😤', 'Noob alert 🤡', 'Wasted! 😂', 'Skill issue 💅', 'Bruh... 🫠', 'That weak? 😏', 'Try again! 🐒', 'Shaky hands? 🤣', 'Eyes where? 👀', 'Playing like a bot 🤖', 'Keep trying! 😅', 'F 🫡'][Math.floor(Math.random() * 14)],
+    reviveBtn: isVN ? '🎬 XEM VIDEO ĐỂ HỒI SINH' : '🎬 WATCH AD TO REVIVE',
+    skip: isVN ? 'BỎ QUA' : 'SKIP',
+    revived: isVN ? '💪 HỒI SINH!' : '💪 REVIVED!',
+    nearRecord: (n) => isVN ? `🔥 Còn ${n} điểm phá kỷ lục!` : `🔥 ${n} more to beat record!`,
+    newRecord: isVN ? '🏆 KỶ LỤC MỚI!' : '🏆 NEW RECORD!',
+    newRecordGO: isVN ? '🎉 KỶ LỤC MỚI! 🎉' : '🎉 NEW RECORD! 🎉',
+    milestone: (n) => isVN ? `🎉 Cột mốc ${n} điểm!` : `🎉 Milestone ${n}!`,
+    target: (n) => isVN ? `Mục tiêu: ${n}` : `Target: ${n}`,
+    nextTarget: (n) => isVN ? `Mục tiêu tiếp: ${n} điểm = +${n}🍌` : `Next: ${n} pts = +${n}🍌`,
+    total: (n) => isVN ? `Tổng: ${n}` : `Total: ${n}`,
+    using: isVN ? '✓ Đang dùng' : '✓ Equipped',
     buy: isVN ? 'MUA' : 'BUY',
-    select: isVN ? 'CHON' : 'SELECT',
-    back: isVN ? 'QUAY LAI' : 'BACK',
-    shopTitle: isVN ? 'CUA HANG' : 'SHOP',
-    pointsLeft: (n) => isVN ? `Con ${Math.max(0, n)} diem pha ky luc!` : `${Math.max(0, n)} pts to beat record!`,
+    select: isVN ? 'CHỌN' : 'SELECT',
+    back: isVN ? '← QUAY LẠI' : '← BACK',
+    shopTitle: isVN ? 'CỬA HÀNG' : 'SHOP',
+    pointsLeft: (n) => isVN ? `Còn ${Math.max(0, n)} điểm phá kỷ lục!` : `${Math.max(0, n)} pts to beat record!`,
     shareText: (s) => isVN
-        ? `Monkey Hop - Toi dat ${s} diem! Ban co danh bai duoc khong?\nhttps://tienlam90tb.github.io/monkey-hop/`
-        : `Monkey Hop - I scored ${s}! Can you beat me?\nhttps://tienlam90tb.github.io/monkey-hop/`,
+        ? `🐒🍌 Monkey Hop - Tôi đạt ${s} điểm! Bạn có đánh bại được không?\nhttps://tienlam90tb.github.io/monkey-hop/`
+        : `🐒🍌 Monkey Hop - I scored ${s}! Can you beat me?\nhttps://tienlam90tb.github.io/monkey-hop/`,
     taunts: isVN
-        ? { 0: 'Nghiem tuc di ban oi', 5: 'Moi khoi dong thoi ma!', 15: 'Kha lam! Them ti nua!', 30: 'Wow, pro day!', 60: 'Ban la cao thu!', 999: 'HUYEN THOAI!', near: (n) => `Thieu ${n} diem nua thoi!` }
-        : { 0: 'Seriously?!', 5: 'Just warming up!', 15: 'Not bad! Keep going!', 30: 'Wow, nice!', 60: 'You\'re a pro!', 999: 'LEGENDARY!', near: (n) => `Just ${n} more! So close!` },
-    invincible: isVN ? 'BAT TU!' : 'INVINCIBLE!',
-    magnet: isVN ? 'NAM CHAM!' : 'MAGNET!',
-    copied: isVN ? 'Da copy!' : 'Copied!',
+        ? { 0: 'Nghiêm túc đi bạn ơi 😂', 5: 'Mới khởi động thôi mà! 💪', 15: 'Khá lắm! Thêm tí nữa! 🔥', 30: 'Wow, pro đấy! 😎', 60: 'Bạn là cao thủ! 🏆', 999: 'HUYỀN THOẠI! 👑', near: (n) => `Thiếu ${n} điểm nữa thôi! 😤` }
+        : { 0: 'Seriously?! 😂', 5: 'Just warming up! 💪', 15: 'Not bad! Keep going! 🔥', 30: 'Wow, nice! 😎', 60: 'You\'re a pro! 🏆', 999: 'LEGENDARY! 👑', near: (n) => `Just ${n} more! So close! 😤` },
+    invincible: isVN ? '⭐ BẤT TỬ!' : '⭐ INVINCIBLE!',
+    magnet: isVN ? '🧲 NAM CHÂM!' : '🧲 MAGNET!',
+    copied: isVN ? 'Đã copy!' : 'Copied!',
     ready: isVN ? 'SẴN SÀNG?' : 'READY?',
     go: isVN ? 'CHƠI!' : 'GO!',
     tutorialTap: isVN ? '👆 Chạm để nhảy!' : '👆 Tap to jump!',
@@ -234,18 +234,18 @@ const lang = {
 };
 
 // Theme names localized
-themes[0].name = isVN ? 'Rung' : 'Jungle';
-themes[1].name = isVN ? 'Bien' : 'Ocean';
-themes[2].name = isVN ? 'Nui Lua' : 'Volcano';
-themes[3].name = isVN ? 'Vu Tru' : 'Space';
+themes[0].name = isVN ? 'Rừng' : 'Jungle';
+themes[1].name = isVN ? 'Biển' : 'Ocean';
+themes[2].name = isVN ? 'Núi Lửa' : 'Volcano';
+themes[3].name = isVN ? 'Vũ Trụ' : 'Space';
 
 // ===== SKINS =====
 const skins = [
-    { id: 'default', name: isVN ? 'Khi Nau' : 'Brown Monkey', cost: 0, body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91' },
-    { id: 'golden', name: isVN ? 'Khi Vang' : 'Golden Monkey', cost: 50, body: '#FFD600', belly: '#FFF9C4', light: '#FFEE58', dark: '#F9A825', ear: '#FFE082' },
-    { id: 'ninja', name: isVN ? 'Khi Ninja' : 'Ninja Monkey', cost: 100, body: '#212121', belly: '#424242', light: '#616161', dark: '#000000', ear: '#F44336', acc: 'headband' },
-    { id: 'pirate', name: isVN ? 'Cuop Bien' : 'Pirate', cost: 200, body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91', acc: 'eyepatch' },
-    { id: 'astro', name: isVN ? 'Phi Hanh' : 'Astronaut', cost: 500, body: '#E0E0E0', belly: '#F5F5F5', light: '#BDBDBD', dark: '#9E9E9E', ear: '#80DEEA', acc: 'helmet' },
+    { id: 'default', name: isVN ? 'Khỉ Nâu' : 'Brown Monkey', cost: 0, body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91' },
+    { id: 'golden', name: isVN ? 'Khỉ Vàng' : 'Golden Monkey', cost: 50, body: '#FFD600', belly: '#FFF9C4', light: '#FFEE58', dark: '#F9A825', ear: '#FFE082' },
+    { id: 'ninja', name: isVN ? 'Khỉ Ninja' : 'Ninja Monkey', cost: 100, body: '#212121', belly: '#424242', light: '#616161', dark: '#000000', ear: '#F44336', acc: 'headband' },
+    { id: 'pirate', name: isVN ? 'Cướp Biển' : 'Pirate', cost: 200, body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91', acc: 'eyepatch' },
+    { id: 'astro', name: isVN ? 'Phi Hành' : 'Astronaut', cost: 500, body: '#E0E0E0', belly: '#F5F5F5', light: '#BDBDBD', dark: '#9E9E9E', ear: '#80DEEA', acc: 'helmet' },
 ];
 
 let totalBananas = parseInt(localStorage.getItem('msTB') || '0');
