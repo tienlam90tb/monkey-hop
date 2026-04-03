@@ -346,10 +346,22 @@ function registerName(name) {
 }
 
 function submitScore(name, sc) {
-    fetch(`${FB_URL}/leaderboard/${playerId}.json`, {
-        method: 'PUT',
-        body: JSON.stringify({ name, id: playerId, score: sc, date: new Date().toISOString().slice(0, 10) })
-    }).then(() => setTimeout(fetchLeaderboard, 1000));
+    // Chỉ ghi đè khi điểm mới CAO HƠN điểm cũ
+    fetch(`${FB_URL}/leaderboard/${playerId}.json`)
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.score >= sc) return; // Điểm cũ cao hơn, không ghi đè
+            fetch(`${FB_URL}/leaderboard/${playerId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, id: playerId, score: sc, date: new Date().toISOString().slice(0, 10) })
+            }).then(() => setTimeout(fetchLeaderboard, 1000));
+        }).catch(() => {
+            // Lần đầu chưa có dữ liệu
+            fetch(`${FB_URL}/leaderboard/${playerId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, id: playerId, score: sc, date: new Date().toISOString().slice(0, 10) })
+            }).then(() => setTimeout(fetchLeaderboard, 1000));
+        });
 }
 
 // Fetch leaderboard khi load
