@@ -235,6 +235,14 @@ const lang = {
     tutorialDodge: isVN ? '🌴 Tránh cây!' : '🌴 Dodge trees!',
     tutorialBanana: isVN ? '🍌 Ăn chuối ghi điểm!' : '🍌 Collect bananas!',
     tutorialGood: isVN ? '👍 Giỏi lắm!' : '👍 Nice!',
+    enterNameTitle: isVN ? 'NHẬP TÊN CỦA BẠN' : 'ENTER YOUR NAME',
+    enterNameHint: isVN ? 'Tên hiển thị trên bảng xếp hạng' : 'Shown on leaderboard',
+    enterNameBtn: isVN ? 'BẮT ĐẦU CHƠI' : 'START PLAYING',
+    leaderboardTitle: isVN ? 'BẢNG XẾP HẠNG' : 'LEADERBOARD',
+    rank: isVN ? 'Hạng' : 'Rank',
+    you: isVN ? '(bạn)' : '(you)',
+    noData: isVN ? 'Chưa có dữ liệu' : 'No data yet',
+    yourRank: (r) => isVN ? `Hạng của bạn: #${r}` : `Your rank: #${r}`,
     paused: isVN ? 'TẠM DỪNG' : 'PAUSED',
     resume: isVN ? '▶ TIẾP TỤC' : '▶ RESUME',
     quit: isVN ? '🏠 VỀ MENU' : '🏠 QUIT',
@@ -260,8 +268,59 @@ let unlockedSkins = JSON.parse(localStorage.getItem('msSkins') || '["default"]')
 let currentSkin = localStorage.getItem('msCSkin') || 'default';
 function getSkin() { return skins.find(s => s.id === currentSkin) || skins[0]; }
 
+// ===== FIREBASE LEADERBOARD =====
+const FB_URL = 'https://monkey-hop-6b1b2-default-rtdb.asia-southeast1.firebasedatabase.app';
+let playerName = localStorage.getItem('msName') || '';
+let leaderboard = []; // [{name, score}]
+let myRank = 0;
+
+function fetchLeaderboard() {
+    fetch(`${FB_URL}/leaderboard.json?orderBy="score"&limitToLast=50`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data) { leaderboard = []; return; }
+            leaderboard = Object.values(data).sort((a, b) => b.score - a.score).slice(0, 50);
+            myRank = leaderboard.findIndex(e => e.name === playerName) + 1;
+        }).catch(() => {});
+}
+
+function submitScore(name, sc) {
+    // Chỉ submit nếu cao hơn điểm cũ của mình
+    fetch(`${FB_URL}/leaderboard.json?orderBy="name"&equalTo="${encodeURIComponent(name)}"`)
+        .then(r => r.json())
+        .then(data => {
+            if (data) {
+                const entries = Object.entries(data);
+                const existing = entries.find(([k, v]) => v.name === name);
+                if (existing && existing[1].score >= sc) return; // Điểm cũ cao hơn
+                if (existing) {
+                    // Update
+                    fetch(`${FB_URL}/leaderboard/${existing[0]}.json`, {
+                        method: 'PATCH', body: JSON.stringify({ score: sc })
+                    });
+                    return;
+                }
+            }
+            // Thêm mới
+            fetch(`${FB_URL}/leaderboard.json`, {
+                method: 'POST',
+                body: JSON.stringify({ name, score: sc, date: new Date().toISOString().slice(0, 10) })
+            });
+        }).catch(() => {
+            // Fallback: thêm mới luôn
+            fetch(`${FB_URL}/leaderboard.json`, {
+                method: 'POST',
+                body: JSON.stringify({ name, score: sc, date: new Date().toISOString().slice(0, 10) })
+            });
+        });
+}
+
+// Fetch leaderboard khi load
+fetchLeaderboard();
+setInterval(fetchLeaderboard, 15000); // Refresh mỗi 15s
+
 // ===== GAME STATE =====
-let gameState = 'menu'; // menu, playing, gameover, shop
+let gameState = playerName ? 'menu' : 'enterName'; // Lần đầu nhập tên
 let score = 0, highScore = parseInt(localStorage.getItem('msHS') || '0');
 let frameCount = 0, speed = 3, bananaCount = 0;
 let combo = 0, comboTimer = 0, comboMultiplier = 1;
@@ -1692,14 +1751,17 @@ function drawMenu() {
     // Shop button
     drawButton(GW / 2 - 80, 436, 160, 40, 10, '#FF9800', '#E65100', lang.shop, 'bold 18px Arial', '#FFF');
 
+    // Leaderboard button
+    drawButton(GW / 2 - 80, 486, 160, 36, 8, '#9C27B0', '#6A1B9A', '🏆 ' + lang.leaderboardTitle, 'bold 14px Arial', '#FFF');
+
     // Stats
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.3)';
     ctx.shadowBlur = 4;
-    drawTextOutline(`Record: ${highScore}`, GW / 2 - 50, 510, '#FFF', '#000', 'bold 16px Arial');
-    drawMiniBanana(GW / 2 + 30, 505, 10);
+    drawTextOutline(`Record: ${highScore}`, GW / 2 - 50, 548, '#FFF', '#000', 'bold 16px Arial');
+    drawMiniBanana(GW / 2 + 30, 543, 10);
     ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left';
-    ctx.fillText(totalBananas, GW / 2 + 42, 510);
+    ctx.fillText(totalBananas, GW / 2 + 42, 548);
     ctx.restore();
 
     // Rank badge
@@ -1707,11 +1769,14 @@ function drawMenu() {
     if (rank.name) {
         ctx.font = '14px Arial'; ctx.textAlign = 'center';
         ctx.fillStyle = rank.color;
-        ctx.fillText(`${rank.icon} ${rank.name}`, GW / 2, 530);
+        ctx.fillText(`${rank.icon} ${rank.name}`, GW / 2, 570);
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(lang.tapToPlay, GW / 2, rank.name ? 552 : 540);
+    // Player name + tap hint
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('👤 ' + playerName, GW / 2, 590);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '13px Arial';
+    ctx.fillText(lang.tapToPlay, GW / 2, 610);
 
     drawVignette();
 }
@@ -1912,6 +1977,123 @@ function haptic(type) {
         else if (type === 'medium') navigator.vibrate(30);
         else if (type === 'heavy') navigator.vibrate([50, 30, 50]);
     }
+}
+
+function drawEnterName() {
+    drawSky(); drawGround();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, 0, GW, GH);
+
+    // Panel
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 140, 180, 280, 280, 16); ctx.fill();
+
+    // Monkey icon
+    ctx.font = '50px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🐒', GW / 2, 240);
+
+    // Title
+    ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial';
+    ctx.fillText(lang.enterNameTitle, GW / 2, 280);
+
+    // Hint
+    ctx.fillStyle = '#999'; ctx.font = '13px Arial';
+    ctx.fillText(lang.enterNameHint, GW / 2, 305);
+
+    // Input box
+    ctx.fillStyle = '#F5F5F5'; ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 100, 320, 200, 40, 8); ctx.fill(); ctx.stroke();
+
+    // Player name text
+    ctx.fillStyle = playerName ? '#333' : '#BDBDBD';
+    ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(playerName || '...', GW / 2, 346);
+
+    // Cursor blink
+    if (Math.floor(frameCount / 30) % 2 === 0 && playerName.length < 12) {
+        const tw = ctx.measureText(playerName).width;
+        ctx.fillStyle = '#4CAF50';
+        ctx.fillRect(GW / 2 + tw / 2 + 3, 328, 2, 22);
+    }
+
+    // Start button
+    const canStart = playerName.length >= 2;
+    ctx.fillStyle = canStart ? '#4CAF50' : '#BDBDBD';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 80, 380, 160, 42, 10); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
+    ctx.fillText(lang.enterNameBtn, GW / 2, 407);
+
+    // Name length
+    ctx.fillStyle = '#CCC'; ctx.font = '11px Arial';
+    ctx.fillText(`${playerName.length}/12`, GW / 2 + 80, 355);
+}
+
+function drawLeaderboard() {
+    drawSky(); drawGround();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, GW, GH);
+
+    // Title
+    ctx.fillStyle = '#FFD600'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🏆 ' + lang.leaderboardTitle, GW / 2, 55);
+
+    // Your rank
+    if (myRank > 0) {
+        ctx.fillStyle = '#FFF'; ctx.font = '14px Arial';
+        ctx.fillText(lang.yourRank(myRank), GW / 2, 80);
+    }
+
+    // Table header
+    const startY = 100;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(25, startY, GW - 50, 28);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'left'; ctx.fillText('#', 35, startY + 19);
+    ctx.fillText(isVN ? 'Tên' : 'Name', 65, startY + 19);
+    ctx.textAlign = 'right'; ctx.fillText(isVN ? 'Điểm' : 'Score', GW - 35, startY + 19);
+
+    // Rows
+    if (leaderboard.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px Arial'; ctx.textAlign = 'center';
+        ctx.fillText(lang.noData, GW / 2, startY + 70);
+    } else {
+        leaderboard.slice(0, 20).forEach((entry, i) => {
+            const ry = startY + 32 + i * 26;
+            if (ry > GH - 100) return;
+
+            const isMe = entry.name === playerName;
+
+            // Row bg
+            if (isMe) {
+                ctx.fillStyle = 'rgba(76,175,80,0.3)';
+                ctx.fillRect(25, ry - 16, GW - 50, 24);
+            } else if (i % 2 === 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fillRect(25, ry - 16, GW - 50, 24);
+            }
+
+            // Medal for top 3
+            let medal = '';
+            if (i === 0) medal = '🥇';
+            else if (i === 1) medal = '🥈';
+            else if (i === 2) medal = '🥉';
+
+            ctx.fillStyle = isMe ? '#4CAF50' : 'rgba(255,255,255,0.8)';
+            ctx.font = isMe ? 'bold 13px Arial' : '13px Arial';
+
+            ctx.textAlign = 'left';
+            ctx.fillText(medal || `${i + 1}`, 35, ry);
+            ctx.fillText(entry.name + (isMe ? ' ' + lang.you : ''), 65, ry);
+            ctx.textAlign = 'right';
+            ctx.fillStyle = i < 3 ? '#FFD600' : (isMe ? '#4CAF50' : 'rgba(255,255,255,0.8)');
+            ctx.font = 'bold 13px Arial';
+            ctx.fillText(entry.score, GW - 35, ry);
+        });
+    }
+
+    // Back button
+    ctx.fillStyle = '#F44336';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 50, GH - 75, 100, 36, 8); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(lang.back, GW / 2, GH - 51);
 }
 
 function drawSplash() {
@@ -2450,6 +2632,8 @@ function update() {
             totalBananas += bananaCount;
             localStorage.setItem('msTB', totalBananas + '');
             if (score > highScore) { highScore = score; localStorage.setItem('msHS', highScore + ''); }
+            // Submit to leaderboard
+            if (playerName && score > 0) { submitScore(playerName, score); setTimeout(fetchLeaderboard, 1000); }
         }
     }
 }
@@ -2461,8 +2645,10 @@ function render() {
     // Splash screen
     if (splashTimer > 0) { splashTimer--; drawSplash(); return; }
 
+    if (gameState === 'enterName') { frameCount++; drawEnterName(); return; }
     if (gameState === 'menu') { drawMenu(); return; }
     if (gameState === 'shop') { drawShop(); return; }
+    if (gameState === 'leaderboard') { drawLeaderboard(); return; }
     if (gameState === 'countdown') { drawCountdown(); return; }
 
     // Screen shake
@@ -2510,9 +2696,30 @@ function handleTap(tx, ty) {
     const x = (tx - rect.left) * GW / rect.width;
     const y = (ty - rect.top) * GH / rect.height;
 
-    if (gameState === 'menu') {
+    if (gameState === 'enterName') {
+        // Bấm vào input box -> mở bàn phím
+        if (y > 320 && y < 360) {
+            const name = prompt(isVN ? 'Nhập tên của bạn (2-12 ký tự):' : 'Enter your name (2-12 chars):', playerName);
+            if (name && name.trim().length >= 2) {
+                playerName = name.trim().slice(0, 12);
+                localStorage.setItem('msName', playerName);
+            }
+            return;
+        }
+        // Start button
+        if (y > 380 && y < 422 && playerName.length >= 2) {
+            gameState = 'menu';
+            return;
+        }
+        return;
+    } else if (gameState === 'leaderboard') {
+        // Back button
+        if (y > GH - 75 && y < GH - 39) { gameState = 'menu'; return; }
+        return;
+    } else if (gameState === 'menu') {
         if (y > 370 && y < 420 && x > GW / 2 - 80 && x < GW / 2 + 80) { jump(); return; }
         if (y > 436 && y < 476 && x > GW / 2 - 80 && x < GW / 2 + 80) { gameState = 'shop'; shopScroll = 0; return; }
+        if (y > 486 && y < 522 && x > GW / 2 - 80 && x < GW / 2 + 80) { gameState = 'leaderboard'; fetchLeaderboard(); return; }
         jump();
     } else if (gameState === 'shop') {
         if (y > GH - 70 && y < GH - 34) { gameState = 'menu'; return; }
@@ -2581,6 +2788,12 @@ function handleTap(tx, ty) {
 
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); handleTap(e.clientX, e.clientY); });
 document.addEventListener('keydown', e => {
+    if (gameState === 'enterName') {
+        if (e.key === 'Backspace') { playerName = playerName.slice(0, -1); return; }
+        if (e.key === 'Enter' && playerName.length >= 2) { localStorage.setItem('msName', playerName); gameState = 'menu'; return; }
+        if (e.key.length === 1 && playerName.length < 12) { playerName += e.key; return; }
+        return;
+    }
     if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); }
     if (e.code === 'KeyM') { musicEnabled = !musicEnabled; musicEnabled ? startBGM() : stopBGM(); }
     if (e.code === 'Escape') {
