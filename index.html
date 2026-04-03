@@ -1923,10 +1923,10 @@ function drawShop() {
             ctx.stroke();
         }
 
-        // Mini monkey preview
+        // Mini monkey preview - căn giữa ô bên trái
         ctx.save();
-        ctx.translate(75, sy + 42);
-        ctx.scale(0.8, 0.8);
+        ctx.translate(70, sy + 42);
+        ctx.scale(0.75, 0.75);
         ctx.fillStyle = s.body;
         ctx.beginPath(); ctx.ellipse(0, 3, 14, 16, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = s.belly;
@@ -1938,23 +1938,25 @@ function drawShop() {
         ctx.beginPath(); ctx.arc(8, -10, 2, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
-        // Name + desc
+        // Name + desc - căn trái cố định
+        const infoX = 110;
+        const btnX = GW - 110;
         ctx.fillStyle = '#333'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'left';
-        ctx.fillText(s.name, 120, sy + 30);
-        ctx.fillStyle = '#888'; ctx.font = '11px Arial';
-        ctx.fillText(s.desc || '', 120, sy + 45);
+        ctx.fillText(s.name, infoX, sy + 25);
+        ctx.fillStyle = '#888'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
+        ctx.fillText(s.desc || '', infoX, sy + 42);
 
         if (!owned) {
-            drawMiniBanana(130, sy + 58, 8);
+            drawMiniBanana(infoX, sy + 58, 8);
             ctx.fillStyle = '#FF9800'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
-            ctx.fillText(s.cost, 142, sy + 62);
+            ctx.fillText(s.cost, infoX + 14, sy + 62);
             const canBuy = totalBananas >= s.cost;
-            drawButton(GW - 115, sy + 30, 70, 30, 6, canBuy ? '#4CAF50' : '#BDBDBD', canBuy ? '#388E3C' : '#9E9E9E', lang.buy, 'bold 13px Arial', '#FFF');
+            drawButton(btnX, sy + 28, 70, 30, 6, canBuy ? '#4CAF50' : '#BDBDBD', canBuy ? '#388E3C' : '#9E9E9E', lang.buy, 'bold 13px Arial', '#FFF');
         } else if (selected) {
-            ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
-            ctx.fillText(lang.using, GW - 80, sy + 50);
+            ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(lang.using, btnX + 35, sy + 48);
         } else {
-            drawButton(GW - 115, sy + 30, 70, 30, 6, '#2196F3', '#1565C0', lang.select, 'bold 13px Arial', '#FFF');
+            drawButton(btnX, sy + 28, 70, 30, 6, '#2196F3', '#1565C0', lang.select, 'bold 13px Arial', '#FFF');
         }
     });
 
@@ -2151,69 +2153,89 @@ function drawLeaderboard() {
     drawSky(); drawGround();
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, GW, GH);
 
+    // Panel background
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    drawRoundRect(20, 30, GW - 40, GH - 120, 16);
+    ctx.fill();
+
     // Title
-    ctx.fillStyle = '#FFD600'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('🏆 ' + lang.leaderboardTitle, GW / 2, 55);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FFD600'; ctx.font = 'bold 24px Arial';
+    ctx.fillText('🏆 ' + lang.leaderboardTitle, GW / 2, 65);
 
     // Your rank
     if (myRank > 0) {
-        ctx.fillStyle = '#FFF'; ctx.font = '14px Arial';
-        ctx.fillText(lang.yourRank(myRank), GW / 2, 80);
+        ctx.fillStyle = '#FFF'; ctx.font = '13px Arial';
+        ctx.fillText(lang.yourRank(myRank), GW / 2, 85);
     }
 
-    // Table header
+    // Table
+    const tableX = 35, tableW = GW - 70;
+    const colRank = tableX;
+    const colName = tableX + 40;
+    const colScore = tableX + tableW;
     const startY = 100;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(25, startY, GW - 50, 28);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'left'; ctx.fillText('#', 35, startY + 19);
-    ctx.fillText(isVN ? 'Tên' : 'Name', 65, startY + 19);
-    ctx.textAlign = 'right'; ctx.fillText(isVN ? 'Điểm' : 'Score', GW - 35, startY + 19);
+    const rowH = 28;
 
-    // Rows
+    // Header row
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    drawRoundRect(tableX, startY, tableW, rowH, 6);
+    ctx.fill();
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.textAlign = 'center'; ctx.fillText('#', colRank + 15, startY + 19);
+    ctx.textAlign = 'left'; ctx.fillText(isVN ? 'Tên' : 'Name', colName, startY + 19);
+    ctx.textAlign = 'right'; ctx.fillText(isVN ? 'Điểm' : 'Score', colScore, startY + 19);
+
+    // Data rows
     if (leaderboard.length === 0) {
         ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px Arial'; ctx.textAlign = 'center';
         ctx.fillText(lang.noData, GW / 2, startY + 70);
     } else {
-        leaderboard.slice(0, 20).forEach((entry, i) => {
-            const ry = startY + 32 + i * 26;
-            if (ry > GH - 100) return;
+        leaderboard.slice(0, 15).forEach((entry, i) => {
+            const ry = startY + rowH + 4 + i * rowH;
+            if (ry > GH - 130) return;
 
             const isMe = entry.id === playerId;
 
             // Row bg
             if (isMe) {
-                ctx.fillStyle = 'rgba(76,175,80,0.3)';
-                ctx.fillRect(25, ry - 16, GW - 50, 24);
+                ctx.fillStyle = 'rgba(76,175,80,0.25)';
+                drawRoundRect(tableX, ry - 2, tableW, rowH - 2, 4); ctx.fill();
             } else if (i % 2 === 0) {
                 ctx.fillStyle = 'rgba(255,255,255,0.05)';
-                ctx.fillRect(25, ry - 16, GW - 50, 24);
+                ctx.fillRect(tableX, ry - 2, tableW, rowH - 2);
             }
 
-            // Medal for top 3
+            // Medal / rank number
             let medal = '';
             if (i === 0) medal = '🥇';
             else if (i === 1) medal = '🥈';
             else if (i === 2) medal = '🥉';
 
-            ctx.fillStyle = isMe ? '#4CAF50' : 'rgba(255,255,255,0.8)';
-            ctx.font = isMe ? 'bold 13px Arial' : '13px Arial';
+            ctx.font = isMe ? 'bold 14px Arial' : '14px Arial';
 
+            // Rank
+            ctx.textAlign = 'center';
+            ctx.fillStyle = i < 3 ? '#FFD600' : (isMe ? '#4CAF50' : 'rgba(255,255,255,0.7)');
+            ctx.fillText(medal || `${i + 1}`, colRank + 15, ry + 17);
+
+            // Name
             ctx.textAlign = 'left';
-            ctx.fillText(medal || `${i + 1}`, 35, ry);
-            ctx.fillText(entry.name + (isMe ? ' ' + lang.you : ''), 65, ry);
+            ctx.fillStyle = isMe ? '#4CAF50' : 'rgba(255,255,255,0.85)';
+            const displayName = entry.name.length > 14 ? entry.name.slice(0, 12) + '..' : entry.name;
+            ctx.fillText(displayName + (isMe ? ' ' + lang.you : ''), colName, ry + 17);
+
+            // Score
             ctx.textAlign = 'right';
-            ctx.fillStyle = i < 3 ? '#FFD600' : (isMe ? '#4CAF50' : 'rgba(255,255,255,0.8)');
-            ctx.font = 'bold 13px Arial';
-            ctx.fillText(entry.score, GW - 35, ry);
+            ctx.fillStyle = i < 3 ? '#FFD600' : (isMe ? '#4CAF50' : 'rgba(255,255,255,0.85)');
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(entry.score, colScore, ry + 17);
         });
     }
 
     // Back button
-    ctx.fillStyle = '#F44336';
-    ctx.beginPath(); ctx.roundRect(GW / 2 - 50, GH - 75, 100, 36, 8); ctx.fill();
-    ctx.fillStyle = '#FFF'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(lang.back, GW / 2, GH - 51);
+    drawButton(GW / 2 - 55, GH - 80, 110, 36, 8, '#F44336', '#C62828', lang.back, 'bold 14px Arial', '#FFF');
 }
 
 function drawSplash() {
@@ -2883,7 +2905,7 @@ function handleTap(tx, ty) {
         return;
     } else if (gameState === 'leaderboard') {
         // Back button
-        if (y > GH - 75 && y < GH - 39) { gameState = 'menu'; return; }
+        if (y > GH - 80 && y < GH - 44) { gameState = 'menu'; return; }
         return;
     } else if (gameState === 'menu') {
         if (y > 370 && y < 420 && x > GW / 2 - 80 && x < GW / 2 + 80) { jump(); return; }
