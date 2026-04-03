@@ -180,7 +180,9 @@ const lang = {
     retry: isVN ? 'CHƠI LẠI' : 'PLAY AGAIN',
     share: isVN ? '📤 CHIA SẺ THÁCH BẠN BÈ' : '📤 SHARE & CHALLENGE',
     menu: '🏠 Menu',
-    died: isVN ? 'Bạn đã chết!' : 'You died!',
+    died: isVN
+        ? () => ['Cay thế nhở 🥲', 'VCL... 💀', 'Bực thế nhở 😤', 'Noob quá bạn ơi 🤡', 'Ê ê chết rồi kìa 😂', 'Skill issue đấy 💅', 'Đùa à? 🫠', 'Yếu vậy? 😏', 'Thử lại đi ku 🐒', 'Tay run à? 🤣', 'Mắt ở đâu vậy? 👀', 'Chơi như bot 🤖', 'Ráng lên bạn ơi 😅', 'F trong chat 🫡'][Math.floor(Math.random() * 14)]
+        : () => ['Ouch! 🥲', 'RIP 💀', 'So close! 😤', 'Noob alert 🤡', 'Wasted! 😂', 'Skill issue 💅', 'Bruh... 🫠', 'That weak? 😏', 'Try again! 🐒', 'Shaky hands? 🤣', 'Eyes where? 👀', 'Playing like a bot 🤖', 'Keep trying! 😅', 'F 🫡'][Math.floor(Math.random() * 14)],
     reviveBtn: isVN ? '🎬 XEM VIDEO ĐỂ HỒI SINH' : '🎬 WATCH AD TO REVIVE',
     skip: isVN ? 'BỎ QUA' : 'SKIP',
     revived: isVN ? '💪 HỒI SINH!' : '💪 REVIVED!',
@@ -234,7 +236,7 @@ let score = 0, highScore = parseInt(localStorage.getItem('msHS') || '0');
 let frameCount = 0, speed = 3, bananaCount = 0;
 let combo = 0, comboTimer = 0, comboMultiplier = 1;
 let currentGap = 160, currentInterval = 100;
-let canRevive = false, revived = false; // Hồi sinh 1 lần/ván
+let canRevive = false, revived = false, deathText = ''; // Hồi sinh 1 lần/ván
 let slowMoTimer = 0, shakeTimer = 0; // Slow motion + rung khi chết
 let nearRecordShown = false; // "Còn X điểm phá kỷ lục"
 let milestones = [10, 25, 50, 100]; // Milestone unlock
@@ -867,7 +869,7 @@ function drawRevive() {
 
     // Text
     ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial';
-    ctx.fillText(lang.died, GW / 2, 310);
+    ctx.fillText(deathText || lang.died(), GW / 2, 310);
 
     ctx.fillStyle = '#666'; ctx.font = '14px Arial';
     ctx.fillText(`Điểm hiện tại: ${score}`, GW / 2, 340);
@@ -1079,6 +1081,8 @@ function update() {
         // Screen shake
         shakeTimer = 15;
         sfxHit();
+
+        deathText = lang.died(); // Random text cay cú
 
         if (!revived) {
             // Offer revive
