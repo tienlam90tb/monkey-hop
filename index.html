@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Monkey Hop 🐒🍌</title>
+<meta name="description" content="Monkey Hop - Help the monkey jump and collect bananas! A fun addictive game.">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Monkey Hop">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#1a1a2e;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;font-family:Arial,sans-serif;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -1569,12 +1576,26 @@ function drawScore() {
     ctx.font = '12px Arial'; ctx.textAlign = 'right';
     ctx.fillText(getTheme().name, GW - 10, GH - 68);
 
-    // Pause button (top right)
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.beginPath(); ctx.roundRect(GW - 42, 8, 34, 34, 8); ctx.fill();
+    // Top right buttons: Music | SFX | Pause
+    // Music toggle
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.roundRect(GW - 120, 8, 30, 30, 6); ctx.fill();
+    ctx.fillStyle = musicEnabled ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)';
+    ctx.font = '16px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🎵', GW - 105, 29);
+
+    // SFX toggle
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.roundRect(GW - 82, 8, 30, 30, 6); ctx.fill();
+    ctx.fillStyle = sfxEnabled ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)';
+    ctx.fillText('🔊', GW - 67, 29);
+
+    // Pause button
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.roundRect(GW - 44, 8, 34, 30, 6); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillRect(GW - 34, 15, 5, 20);
-    ctx.fillRect(GW - 24, 15, 5, 20);
+    ctx.fillRect(GW - 36, 14, 5, 18);
+    ctx.fillRect(GW - 26, 14, 5, 18);
 }
 
 // ===== SCREEN EDGE GLOW =====
@@ -2544,8 +2565,12 @@ function handleTap(tx, ty) {
             return;
         }
     } else if (gameState === 'playing') {
-        // Pause button (top right)
-        if (x > GW - 50 && y < 45) { paused = true; gameState = 'paused'; stopBGM(); return; }
+        // Top right buttons
+        if (y < 45) {
+            if (x > GW - 120 && x < GW - 90) { musicEnabled = !musicEnabled; musicEnabled ? startBGM() : stopBGM(); return; }
+            if (x > GW - 82 && x < GW - 52) { sfxEnabled = !sfxEnabled; return; }
+            if (x > GW - 44) { paused = true; gameState = 'paused'; stopBGM(); return; }
+        }
         jump();
     } else if (gameState === 'gameover') {
         if (y > 398 && y < 438) { jump(); return; }
@@ -2588,6 +2613,11 @@ document.addEventListener('visibilitychange', () => {
         paused = true; gameState = 'paused'; stopBGM();
     }
 });
+
+// Register Service Worker cho PWA
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 
 loop();
 </script>
