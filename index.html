@@ -228,6 +228,9 @@ const lang = {
     tutorialDodge: isVN ? '🌴 Tránh cây!' : '🌴 Dodge trees!',
     tutorialBanana: isVN ? '🍌 Ăn chuối ghi điểm!' : '🍌 Collect bananas!',
     tutorialGood: isVN ? '👍 Giỏi lắm!' : '👍 Nice!',
+    paused: isVN ? 'TẠM DỪNG' : 'PAUSED',
+    resume: isVN ? '▶ TIẾP TỤC' : '▶ RESUME',
+    quit: isVN ? '🏠 VỀ MENU' : '🏠 QUIT',
 };
 
 // Theme names localized
@@ -259,7 +262,9 @@ let currentGap = 160, currentInterval = 100;
 let canRevive = false, revived = false, deathText = '';
 let slowMoTimer = 0, shakeTimer = 0;
 let nearRecordShown = false;
-let countdownTimer = 0; // 3-2-1 countdown (180 frames = 3 sec)
+let countdownTimer = 0; // 3-2-1 countdown
+let paused = false; // Pause state
+let splashTimer = 90; // Splash screen (1.5 sec)
 let isTutorial = false; // Ván đầu tiên dễ hơn
 let tutorialStep = 0; // 0=chưa, 1=đang hướng dẫn tap, 2=đã qua ống đầu, 3=done
 let tutorialPlayed = localStorage.getItem('msTutorial') === '1';
@@ -1564,10 +1569,12 @@ function drawScore() {
     ctx.font = '12px Arial'; ctx.textAlign = 'right';
     ctx.fillText(getTheme().name, GW - 10, GH - 68);
 
-    // Sound toggle
-    ctx.font = '20px Arial'; ctx.textAlign = 'left';
-    ctx.fillStyle = sfxEnabled ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
-    ctx.fillText(sfxEnabled ? 'SFX' : 'OFF', GW - 42, 32);
+    // Pause button (top right)
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.roundRect(GW - 42, 8, 34, 34, 8); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillRect(GW - 34, 15, 5, 20);
+    ctx.fillRect(GW - 24, 15, 5, 20);
 }
 
 // ===== SCREEN EDGE GLOW =====
@@ -1674,8 +1681,16 @@ function drawMenu() {
     ctx.fillText(totalBananas, GW / 2 + 42, 510);
     ctx.restore();
 
+    // Rank badge
+    const rank = getRank(highScore);
+    if (rank.name) {
+        ctx.font = '14px Arial'; ctx.textAlign = 'center';
+        ctx.fillStyle = rank.color;
+        ctx.fillText(`${rank.icon} ${rank.name}`, GW / 2, 530);
+    }
+
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(lang.tapToPlay, GW / 2, 540);
+    ctx.fillText(lang.tapToPlay, GW / 2, rank.name ? 552 : 540);
 
     drawVignette();
 }
@@ -1831,8 +1846,15 @@ function drawGameOver() {
         const diff = highScore - score;
         if (diff <= 5) taunt = t.near(diff);
     }
+    // Rank badge
+    const goRank = getRank(score);
+    if (goRank.name) {
+        ctx.fillStyle = goRank.color; ctx.font = 'bold 14px Arial';
+        ctx.fillText(`${goRank.icon} ${goRank.name}`, GW / 2, 352);
+    }
+
     ctx.fillStyle = '#666'; ctx.font = '14px Arial';
-    ctx.fillText(taunt, GW / 2, 365);
+    ctx.fillText(taunt, GW / 2, goRank.name ? 372 : 365);
 
     // Next milestone
     let nextM = milestones.find(m => score < m);
@@ -1853,6 +1875,85 @@ function drawGameOver() {
     ctx.fill();
     ctx.fillStyle = '#999'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
     ctx.fillText('Menu', GW / 2, 513);
+}
+
+function getRank(s) {
+    if (s >= 200) return { name: 'Diamond', icon: '💎', color: '#00BCD4' };
+    if (s >= 100) return { name: 'Gold', icon: '🥇', color: '#FFD600' };
+    if (s >= 50) return { name: 'Silver', icon: '🥈', color: '#9E9E9E' };
+    if (s >= 20) return { name: 'Bronze', icon: '🥉', color: '#FF8A65' };
+    return { name: '', icon: '', color: '' };
+}
+
+function haptic(type) {
+    if (navigator.vibrate) {
+        if (type === 'light') navigator.vibrate(15);
+        else if (type === 'medium') navigator.vibrate(30);
+        else if (type === 'heavy') navigator.vibrate([50, 30, 50]);
+    }
+}
+
+function drawSplash() {
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, GW, GH);
+
+    const alpha = splashTimer > 60 ? (90 - splashTimer) / 30 : splashTimer / 60;
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    // Logo
+    ctx.fillStyle = '#FFD600';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('🐒', GW / 2, GH / 2 - 30);
+
+    ctx.fillStyle = '#FFD600';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('MONKEY', GW / 2, GH / 2 + 20);
+    ctx.fillStyle = '#4CAF50';
+    ctx.fillText('SWING', GW / 2, GH / 2 + 58);
+
+    // Banana
+    ctx.font = '24px Arial';
+    ctx.fillText('🍌', GW / 2 - 80, GH / 2 + 40);
+    ctx.fillText('🍌', GW / 2 + 80, GH / 2 + 40);
+
+    ctx.globalAlpha = 1;
+}
+
+function drawPause() {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, GW, GH);
+
+    // Panel
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 110, GH / 2 - 110, 220, 220, 16); ctx.fill();
+
+    // Pause icon
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(GW / 2 - 20, GH / 2 - 80, 15, 50);
+    ctx.fillRect(GW / 2 + 5, GH / 2 - 80, 15, 50);
+
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 22px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(lang.paused, GW / 2, GH / 2 + 5);
+
+    // Score
+    ctx.fillStyle = '#999';
+    ctx.font = '14px Arial';
+    ctx.fillText(`${lang.score}: ${score}`, GW / 2, GH / 2 + 30);
+
+    // Resume button
+    ctx.fillStyle = '#4CAF50';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 80, GH / 2 + 45, 160, 38, 8); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
+    ctx.fillText(lang.resume, GW / 2, GH / 2 + 70);
+
+    // Quit button
+    ctx.fillStyle = '#F44336';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 60, GH / 2 + 92, 120, 30, 6); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 13px Arial';
+    ctx.fillText(lang.quit, GW / 2, GH / 2 + 112);
 }
 
 function drawCountdown() {
@@ -2084,7 +2185,7 @@ function checkBan() {
             combo++; comboTimer = 90;
             comboMultiplier = Math.min(Math.floor(combo / 3) + 1, 5);
             bananaCount += comboMultiplier;
-            sfxCollect(comboMultiplier - 1);
+            sfxCollect(comboMultiplier - 1); haptic('light');
             spawnP(b.x, b.y, '#FFD600', 8, comboMultiplier > 1 ? 'star' : 'circle');
             // Expanding ring effect
             collectRings.push({ x: b.x, y: b.y, radius: 5, life: 1 });
@@ -2300,6 +2401,7 @@ function update() {
         shakeTimer = 15;
         sfxHit();
         deathText = lang.died();
+        haptic('heavy');
 
         // Death particles explosion
         const deathColors = ['#F44336', '#FF5722', '#FF9800', '#FFD600', '#FFF', '#E91E63'];
@@ -2335,6 +2437,9 @@ function update() {
 
 function render() {
     ctx.clearRect(0, 0, GW, GH);
+    // Splash screen
+    if (splashTimer > 0) { splashTimer--; drawSplash(); return; }
+
     if (gameState === 'menu') { drawMenu(); return; }
     if (gameState === 'shop') { drawShop(); return; }
     if (gameState === 'countdown') { drawCountdown(); return; }
@@ -2371,6 +2476,7 @@ function render() {
 
     if (gameState === 'revive') drawRevive();
     if (gameState === 'gameover') drawGameOver();
+    if (gameState === 'paused') drawPause();
 }
 
 function loop() { update(); render(); requestAnimationFrame(loop); }
@@ -2426,8 +2532,20 @@ function handleTap(tx, ty) {
             spawnP(mk.x + mk.w / 2, mk.y + mk.h / 2, '#F44336', 20);
             return;
         }
+    } else if (gameState === 'paused') {
+        // Resume button
+        if (y > GH / 2 + 45 && y < GH / 2 + 83) { paused = false; gameState = 'playing'; startBGM(); return; }
+        // Quit button
+        if (y > GH / 2 + 92 && y < GH / 2 + 122) {
+            paused = false; gameState = 'menu'; stopBGM();
+            totalBananas += bananaCount;
+            localStorage.setItem('msTB', totalBananas + '');
+            if (score > highScore) { highScore = score; localStorage.setItem('msHS', highScore + ''); }
+            return;
+        }
     } else if (gameState === 'playing') {
-        if (x > GW - 50 && y < 45) { sfxEnabled = !sfxEnabled; return; }
+        // Pause button (top right)
+        if (x > GW - 50 && y < 45) { paused = true; gameState = 'paused'; stopBGM(); return; }
         jump();
     } else if (gameState === 'gameover') {
         if (y > 398 && y < 438) { jump(); return; }
@@ -2440,6 +2558,10 @@ canvas.addEventListener('pointerdown', e => { e.preventDefault(); handleTap(e.cl
 document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); }
     if (e.code === 'KeyM') { musicEnabled = !musicEnabled; musicEnabled ? startBGM() : stopBGM(); }
+    if (e.code === 'Escape') {
+        if (gameState === 'playing') { paused = true; gameState = 'paused'; stopBGM(); }
+        else if (gameState === 'paused') { paused = false; gameState = 'playing'; startBGM(); }
+    }
 });
 
 // Touch scroll in shop
@@ -2459,6 +2581,13 @@ function resize() {
     canvas.style.width = GW * r + 'px'; canvas.style.height = GH * r + 'px';
 }
 window.addEventListener('resize', resize); resize();
+
+// Auto-pause khi chuyển tab/app
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && gameState === 'playing') {
+        paused = true; gameState = 'paused'; stopBGM();
+    }
+});
 
 loop();
 </script>
