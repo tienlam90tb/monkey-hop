@@ -133,7 +133,7 @@ const themes = [
         ambient: '#4CAF50',
     },
     {
-        name: 'Ocean', minScore: 15,
+        name: 'Ocean', minScore: 30,
         sky1: '#1565C0', sky2: '#4DD0E1',
         trunk: '#455A64', trunkDark: '#37474F',
         leaf: '#00838F', leafLight: '#26C6DA',
@@ -147,7 +147,7 @@ const themes = [
         ambient: '#29B6F6',
     },
     {
-        name: 'Volcano', minScore: 35,
+        name: 'Volcano', minScore: 75,
         sky1: '#BF360C', sky2: '#FF6F00',
         trunk: '#424242', trunkDark: '#212121',
         leaf: '#FF5722', leafLight: '#FF8A65',
@@ -161,7 +161,7 @@ const themes = [
         ambient: '#FF5722',
     },
     {
-        name: 'Space', minScore: 60,
+        name: 'Space', minScore: 150,
         sky1: '#0D0D2B', sky2: '#1A1A4E',
         trunk: '#37474F', trunkDark: '#263238',
         leaf: '#7C4DFF', leafLight: '#B388FF',
@@ -267,7 +267,7 @@ let tutorialHandY = 0; // Animation tay chạm
 let milestones = [10, 25, 50, 100];
 let milestoneUnlocked = JSON.parse(localStorage.getItem('msMilestones') || '[]');
 
-const mk = { x: 80, y: GH / 2, w: 50, h: 50, vel: 0, grav: 0.45, jmp: -8, rot: 0 };
+const mk = { x: 80, y: GH / 2, w: 50, h: 50, vel: 0, grav: 0.38, jmp: -7.5, rot: 0 };
 let obs = [], bans = [], enemies = [], powerups = [], parts = [], floatTexts = [];
 let activePower = { type: null, timer: 0 };
 let clouds = [], stars = [];
@@ -2201,16 +2201,19 @@ function update() {
         }
     }
 
-    // Difficulty (tutorial = dễ hơn)
+    // Difficulty (rebalanced: pro có thể đạt 200-300 điểm)
     if (isTutorial && score < 3) {
-        speed = SPD * 0.8; // Chậm hơn
-        currentGap = 200; // Khoảng cách rộng hơn nhiều
-        currentInterval = 120; // Ống thưa hơn
+        speed = SPD * 0.8;
+        currentGap = 200;
+        currentInterval = 120;
     } else {
-        speed = SPD + Math.floor(score / 5) * 0.25;
-        speed = Math.min(speed, 8);
-        currentGap = Math.max(120, 160 - score * 0.5);
-        currentInterval = Math.max(65, 100 - score * 0.5);
+        // Tốc độ tăng rất chậm: max 5.5 thay vì 8
+        speed = SPD + Math.floor(score / 10) * 0.15;
+        speed = Math.min(speed, 5.5);
+        // Gap thu hẹp chậm: 160 → min 135 (trước 120)
+        currentGap = Math.max(135, 160 - score * 0.2);
+        // Ống xuất hiện thưa hơn: min 75 thay vì 65
+        currentInterval = Math.max(75, 100 - score * 0.2);
     }
 
     // Theme transition
@@ -2259,7 +2262,8 @@ function update() {
 
     // Enemies
     enemyTimer++;
-    if (!isTutorial && enemyTimer >= Math.max(80, 180 - score * 2) && score > 3) { spawnEnemy(); enemyTimer = 0; }
+    // Enemy: xuất hiện từ điểm 8+, tần suất tăng chậm, min 120 (trước 80)
+    if (!isTutorial && enemyTimer >= Math.max(120, 250 - score * 1.5) && score > 8) { spawnEnemy(); enemyTimer = 0; }
     enemies.forEach(e => {
         e.x -= e.vx;
         e.frame++;
