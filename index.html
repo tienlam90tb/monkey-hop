@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Monkey Swing 🐒🍌</title>
+<title>Monkey Hop 🐒🍌</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#1a1a2e;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;font-family:Arial,sans-serif;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -14,7 +14,7 @@ canvas{display:block;max-width:100vw;max-height:100vh}
 <canvas id="game"></canvas>
 <script>
 // ============================================
-//  MONKEY SWING - VISUALLY UPGRADED VERSION
+//  MONKEY HOP - VISUALLY UPGRADED VERSION
 // ============================================
 
 const canvas = document.getElementById('game');
@@ -214,8 +214,8 @@ const lang = {
     shopTitle: isVN ? 'CUA HANG' : 'SHOP',
     pointsLeft: (n) => isVN ? `Con ${Math.max(0, n)} diem pha ky luc!` : `${Math.max(0, n)} pts to beat record!`,
     shareText: (s) => isVN
-        ? `Monkey Swing - Toi dat ${s} diem! Ban co danh bai duoc khong?\nhttps://tienlam90tb.github.io/monkey-swing/`
-        : `Monkey Swing - I scored ${s}! Can you beat me?\nhttps://tienlam90tb.github.io/monkey-swing/`,
+        ? `Monkey Hop - Toi dat ${s} diem! Ban co danh bai duoc khong?\nhttps://tienlam90tb.github.io/monkey-hop/`
+        : `Monkey Hop - I scored ${s}! Can you beat me?\nhttps://tienlam90tb.github.io/monkey-hop/`,
     taunts: isVN
         ? { 0: 'Nghiem tuc di ban oi', 5: 'Moi khoi dong thoi ma!', 15: 'Kha lam! Them ti nua!', 30: 'Wow, pro day!', 60: 'Ban la cao thu!', 999: 'HUYEN THOAI!', near: (n) => `Thieu ${n} diem nua thoi!` }
         : { 0: 'Seriously?!', 5: 'Just warming up!', 15: 'Not bad! Keep going!', 30: 'Wow, nice!', 60: 'You\'re a pro!', 999: 'LEGENDARY!', near: (n) => `Just ${n} more! So close!` },
@@ -1652,7 +1652,7 @@ function drawMenu() {
     ctx.shadowOffsetX = 3;
     ctx.shadowOffsetY = 3;
     drawTextOutline('MONKEY', GW / 2, 158 + bounce, '#FFD600', '#5D4037', 'bold 46px Arial');
-    drawTextOutline('SWING', GW / 2, 210 + bounce * 0.7, '#4CAF50', '#1B5E20', 'bold 46px Arial');
+    drawTextOutline('HOP', GW / 2, 210 + bounce * 0.7, '#4CAF50', '#1B5E20', 'bold 46px Arial');
     ctx.restore();
 
     // Monkey preview
@@ -1910,7 +1910,7 @@ function drawSplash() {
     ctx.font = 'bold 32px Arial';
     ctx.fillText('MONKEY', GW / 2, GH / 2 + 20);
     ctx.fillStyle = '#4CAF50';
-    ctx.fillText('SWING', GW / 2, GH / 2 + 58);
+    ctx.fillText('HOP', GW / 2, GH / 2 + 58);
 
     // Banana
     ctx.font = '24px Arial';
@@ -2248,7 +2248,7 @@ function jump() {
 function shareScore() {
     const text = lang.shareText(score);
     if (navigator.share) {
-        navigator.share({ title: 'Monkey Swing', text });
+        navigator.share({ title: 'Monkey Hop', text });
     } else if (navigator.clipboard) {
         navigator.clipboard.writeText(text);
         floatTexts.push({ x: GW / 2, y: GH / 2, text: lang.copied, color: '#4CAF50', size: 20, life: 1.5 });
