@@ -256,11 +256,42 @@ themes[3].name = isVN ? 'Vũ Trụ' : 'Space';
 
 // ===== SKINS =====
 const skins = [
-    { id: 'default', name: isVN ? 'Khỉ Nâu' : 'Brown Monkey', cost: 0, body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91' },
-    { id: 'golden', name: isVN ? 'Khỉ Vàng' : 'Golden Monkey', cost: 50, body: '#FFD600', belly: '#FFF9C4', light: '#FFEE58', dark: '#F9A825', ear: '#FFE082' },
-    { id: 'ninja', name: isVN ? 'Khỉ Ninja' : 'Ninja Monkey', cost: 100, body: '#212121', belly: '#424242', light: '#616161', dark: '#000000', ear: '#F44336', acc: 'headband' },
-    { id: 'pirate', name: isVN ? 'Cướp Biển' : 'Pirate', cost: 200, body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91', acc: 'eyepatch' },
-    { id: 'astro', name: isVN ? 'Phi Hành' : 'Astronaut', cost: 500, body: '#E0E0E0', belly: '#F5F5F5', light: '#BDBDBD', dark: '#9E9E9E', ear: '#80DEEA', acc: 'helmet' },
+    { id: 'default', name: isVN ? 'Khỉ Nâu' : 'Brown Monkey', cost: 0,
+      desc: isVN ? 'Bình thường' : 'Normal',
+      body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91',
+      buff: null, trail: null, aura: null },
+    { id: 'golden', name: isVN ? 'Khỉ Vàng' : 'Golden Monkey', cost: 50,
+      desc: isVN ? 'Hút chuối +10%' : 'Banana magnet +10%',
+      body: '#FFD600', belly: '#FFF9C4', light: '#FFEE58', dark: '#F9A825', ear: '#FFE082',
+      buff: 'magnet10', trail: null, aura: null },
+    { id: 'ninja', name: isVN ? 'Khỉ Ninja' : 'Ninja Monkey', cost: 100,
+      desc: isVN ? 'Nhỏ hơn 15%' : '15% smaller hitbox',
+      body: '#212121', belly: '#424242', light: '#616161', dark: '#000000', ear: '#F44336', acc: 'headband',
+      buff: 'small15', trail: 'smoke', aura: null },
+    { id: 'pirate', name: isVN ? 'Cướp Biển' : 'Pirate', cost: 200,
+      desc: isVN ? 'Combo giữ 2x lâu hơn' : 'Combo lasts 2x longer',
+      body: '#8D6E63', belly: '#D7CCC8', light: '#A1887F', dark: '#5D4037', ear: '#FFAB91', acc: 'eyepatch',
+      buff: 'combo2x', trail: null, aura: null },
+    { id: 'astro', name: isVN ? 'Phi Hành' : 'Astronaut', cost: 500,
+      desc: isVN ? 'Trọng lực nhẹ 10%' : '10% less gravity',
+      body: '#E0E0E0', belly: '#F5F5F5', light: '#BDBDBD', dark: '#9E9E9E', ear: '#80DEEA', acc: 'helmet',
+      buff: 'lowgrav', trail: 'stars', aura: '#80DEEA' },
+    { id: 'fire', name: isVN ? 'Khỉ Lửa' : 'Fire Monkey', cost: 800,
+      desc: isVN ? 'Bất tử thêm 1 giây' : '+1s invincibility',
+      body: '#FF5722', belly: '#FF8A65', light: '#FF7043', dark: '#BF360C', ear: '#FFD600', acc: 'flame',
+      buff: 'invplus', trail: 'fire', aura: '#FF5722' },
+    { id: 'ice', name: isVN ? 'Khỉ Băng' : 'Ice Monkey', cost: 1000,
+      desc: isVN ? 'Làm chậm kẻ thù 20%' : 'Slow enemies 20%',
+      body: '#4FC3F7', belly: '#E1F5FE', light: '#81D4FA', dark: '#0277BD', ear: '#B3E5FC',
+      buff: 'slowenemy', trail: 'ice', aura: '#4FC3F7' },
+    { id: 'galaxy', name: isVN ? 'Khỉ Thiên Hà' : 'Galaxy Monkey', cost: 2000,
+      desc: isVN ? 'Tất cả buff +5%' : 'All buffs +5%',
+      body: '#7C4DFF', belly: '#E8EAF6', light: '#B388FF', dark: '#311B92', ear: '#EA80FC', acc: 'crown',
+      buff: 'allbuff', trail: 'galaxy', aura: '#7C4DFF' },
+    { id: 'diamond', name: isVN ? '💎 Khỉ Kim Cương' : '💎 Diamond Monkey', cost: 5000,
+      desc: isVN ? 'Hút chuối +15%, nhỏ 10%, combo 2x' : 'Magnet+15%, small 10%, combo 2x',
+      body: '#00BCD4', belly: '#E0F7FA', light: '#4DD0E1', dark: '#006064', ear: '#84FFFF', acc: 'crown',
+      buff: 'diamond', trail: 'diamond', aura: '#00BCD4' },
 ];
 
 let totalBananas = parseInt(localStorage.getItem('msTB') || '0');
@@ -989,9 +1020,30 @@ function drawMonkey() {
         ctx.beginPath(); ctx.arc(0, 0, mr + 8, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // Trail particles
+    // Trail particles - khác nhau theo skin
     if (gameState === 'playing' && frameCount % 3 === 0) {
-        parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1.5, vy: 0.5, size: 4, life: 0.5, color: S.body, type: 'circle' });
+        const t = S.trail;
+        if (t === 'fire') {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -2 + Math.random(), vy: (Math.random()-0.5)*2, size: 6, life: 0.6, color: ['#FF5722','#FF9800','#FFD600'][Math.floor(Math.random()*3)], type: 'circle' });
+        } else if (t === 'ice') {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1.5, vy: (Math.random()-0.5)*2, size: 4, life: 0.7, color: '#B3E5FC', type: 'star' });
+        } else if (t === 'galaxy') {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1 + Math.random()*-1, vy: (Math.random()-0.5)*3, size: 5, life: 0.8, color: ['#7C4DFF','#EA80FC','#B388FF'][Math.floor(Math.random()*3)], type: 'star' });
+        } else if (t === 'diamond') {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1.5, vy: (Math.random()-0.5)*2, size: 5, life: 0.8, color: ['#00BCD4','#4DD0E1','#84FFFF'][Math.floor(Math.random()*3)], type: 'star' });
+        } else if (t === 'smoke') {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1, vy: -0.5, size: 5, life: 0.4, color: 'rgba(100,100,100,0.5)', type: 'circle' });
+        } else if (t === 'stars') {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1.5, vy: (Math.random()-0.5)*2, size: 4, life: 0.6, color: '#80DEEA', type: 'star' });
+        } else {
+            parts.push({ x: mk.x + mk.w / 2, y: mk.y + mk.h / 2, vx: -1.5, vy: 0.5, size: 4, life: 0.5, color: S.body, type: 'circle' });
+        }
+    }
+
+    // Aura glow cho skin đắt
+    if (S.aura && gameState === 'playing') {
+        ctx.fillStyle = S.aura + '22';
+        ctx.beginPath(); ctx.arc(0, 0, 35 + Math.sin(frameCount * 0.08) * 5, 0, Math.PI * 2); ctx.fill();
     }
 
     // Tail with physics-like wagging
@@ -1167,6 +1219,39 @@ function drawMonkey() {
         // Reflection
         ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(x + mk.w / 2 + 1, y + 8, 10, Math.PI + 0.5, Math.PI + 1.5); ctx.stroke();
+    }
+    if (S.acc === 'flame') {
+        // Lửa trên đầu
+        const flicker = Math.sin(frameCount * 0.3) * 3;
+        ctx.fillStyle = '#FF5722';
+        ctx.beginPath();
+        ctx.moveTo(x + mk.w / 2 - 5, y + 2);
+        ctx.quadraticCurveTo(x + mk.w / 2, y - 15 + flicker, x + mk.w / 2 + 5, y + 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFD600';
+        ctx.beginPath();
+        ctx.moveTo(x + mk.w / 2 - 3, y + 2);
+        ctx.quadraticCurveTo(x + mk.w / 2, y - 8 + flicker, x + mk.w / 2 + 3, y + 2);
+        ctx.fill();
+    }
+    if (S.acc === 'crown') {
+        // Vương miện
+        ctx.fillStyle = '#FFD600';
+        ctx.beginPath();
+        ctx.moveTo(x + mk.w / 2 - 10, y + 3);
+        ctx.lineTo(x + mk.w / 2 - 8, y - 8);
+        ctx.lineTo(x + mk.w / 2 - 3, y - 2);
+        ctx.lineTo(x + mk.w / 2 + 3, y - 12);
+        ctx.lineTo(x + mk.w / 2 + 8, y - 2);
+        ctx.lineTo(x + mk.w / 2 + 12, y - 8);
+        ctx.lineTo(x + mk.w / 2 + 14, y + 3);
+        ctx.fill();
+        // Gems
+        ctx.fillStyle = '#F44336';
+        ctx.beginPath(); ctx.arc(x + mk.w / 2 + 3, y - 5, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#2196F3';
+        ctx.beginPath(); ctx.arc(x + mk.w / 2 - 4, y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + mk.w / 2 + 10, y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
     }
 
     ctx.restore();
@@ -1847,14 +1932,16 @@ function drawShop() {
         ctx.beginPath(); ctx.arc(8, -10, 2, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
-        // Name + cost
-        ctx.fillStyle = '#333'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left';
-        ctx.fillText(s.name, 120, sy + 35);
+        // Name + desc
+        ctx.fillStyle = '#333'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'left';
+        ctx.fillText(s.name, 120, sy + 30);
+        ctx.fillStyle = '#888'; ctx.font = '11px Arial';
+        ctx.fillText(s.desc || '', 120, sy + 45);
 
         if (!owned) {
-            drawMiniBanana(130, sy + 52, 8);
-            ctx.fillStyle = '#FF9800'; ctx.font = '14px Arial'; ctx.textAlign = 'left';
-            ctx.fillText(s.cost, 142, sy + 56);
+            drawMiniBanana(130, sy + 58, 8);
+            ctx.fillStyle = '#FF9800'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+            ctx.fillText(s.cost, 142, sy + 62);
             const canBuy = totalBananas >= s.cost;
             drawButton(GW - 115, sy + 30, 70, 30, 6, canBuy ? '#4CAF50' : '#BDBDBD', canBuy ? '#388E3C' : '#9E9E9E', lang.buy, 'bold 13px Arial', '#FFF');
         } else if (selected) {
@@ -2393,12 +2480,47 @@ function spawnP(x, y, c, n, type) {
         parts.push({ x, y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, size: Math.random() * 4 + 2, life: 1, color: c, type: type || 'circle' });
 }
 
+function hasBuff(buffName) {
+    const s = getSkin();
+    if (!s.buff) return false;
+    if (s.buff === buffName) return true;
+    if (s.buff === 'allbuff') return true; // Galaxy có tất cả buff nhẹ
+    if (s.buff === 'diamond' && ['magnet10','small15','combo2x'].includes(buffName)) return true;
+    return false;
+}
+
+function getHitboxShrink() {
+    const s = getSkin();
+    if (s.buff === 'small15') return 0.15;
+    if (s.buff === 'diamond') return 0.10;
+    if (s.buff === 'allbuff') return 0.05;
+    return 0;
+}
+
+function getBananaRadius() {
+    const s = getSkin();
+    let r = 30;
+    if (s.buff === 'magnet10' || s.buff === 'diamond') r += 5;
+    if (s.buff === 'allbuff') r += 3;
+    return r;
+}
+
+function getComboTime() {
+    if (hasBuff('combo2x')) return 180; // 3 giây
+    return 90; // 1.5 giây
+}
+
 function checkCol() {
     if (activePower.type === 'golden') return false;
-    const px = mk.x + 8, py = mk.y + 8, pw = mk.w - 16, ph = mk.h - 16;
+    const shrink = getHitboxShrink();
+    const extra = Math.floor(mk.w * shrink);
+    const px = mk.x + 8 + extra, py = mk.y + 8 + extra;
+    const pw = mk.w - 16 - extra * 2, ph = mk.h - 16 - extra * 2;
     if (py + ph >= GH - 60 || py <= 0) return true;
     for (const o of obs)
         if (px + pw > o.x && px < o.x + OW && (py < o.th || py + ph > o.by)) return true;
+    // Slow enemies buff
+    const eSlow = hasBuff('slowenemy') ? 0.8 : 1;
     for (const e of enemies) {
         const ex = e.x - e.w, ey = e.y - e.h;
         if (px + pw > ex && px < ex + e.w * 2 && py + ph > ey && py < ey + e.h * 2) return true;
@@ -2410,10 +2532,10 @@ function checkBan() {
     bans.forEach(b => {
         if (b.col) return;
         const dx = (mk.x + mk.w / 2) - b.x, dy = (mk.y + mk.h / 2) - b.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 30) {
+        if (Math.sqrt(dx * dx + dy * dy) < getBananaRadius()) {
             b.col = true;
-            score++; // Ăn chuối = ghi điểm
-            combo++; comboTimer = 90;
+            score++;
+            combo++; comboTimer = getComboTime();
             comboMultiplier = Math.min(Math.floor(combo / 3) + 1, 5);
             bananaCount += comboMultiplier;
             sfxCollect(comboMultiplier - 1); haptic('light');
@@ -2429,7 +2551,8 @@ function checkBan() {
     powerups.forEach((p, i) => {
         const dx = (mk.x + mk.w / 2) - p.x, dy = (mk.y + mk.h / 2) - p.y;
         if (Math.sqrt(dx * dx + dy * dy) < 30) {
-            activePower = { type: p.type, timer: p.type === 'golden' ? 180 : 300 };
+            const invBonus = hasBuff('invplus') ? 60 : (hasBuff('allbuff') ? 30 : 0);
+            activePower = { type: p.type, timer: (p.type === 'golden' ? 180 : 300) + invBonus };
             powerups.splice(i, 1);
             sfxPowerUp();
             spawnP(p.x, p.y, p.type === 'golden' ? '#FFD700' : '#2196F3', 12, 'star');
@@ -2509,7 +2632,8 @@ function update() {
 
     if (gameState !== 'playing') return;
     frameCount++;
-    mk.vel += mk.grav; mk.y += mk.vel;
+    const gravMod = hasBuff('lowgrav') ? 0.90 : (hasBuff('allbuff') ? 0.95 : 1);
+    mk.vel += mk.grav * gravMod; mk.y += mk.vel;
 
     // Tutorial logic
     if (isTutorial) {
@@ -2597,7 +2721,8 @@ function update() {
     // Enemy: xuất hiện từ điểm 8+, tần suất tăng chậm, min 120 (trước 80)
     if (!isTutorial && enemyTimer >= Math.max(120, 250 - score * 1.5) && score > 8) { spawnEnemy(); enemyTimer = 0; }
     enemies.forEach(e => {
-        e.x -= e.vx;
+        const eSlow = hasBuff('slowenemy') ? 0.8 : (hasBuff('allbuff') ? 0.95 : 1);
+        e.x -= e.vx * eSlow;
         e.frame++;
         if (e.type === 'bee') e.y = e.baseY + Math.sin(e.frame * 0.05) * 30;
         if (e.type === 'bat') e.y = e.baseY + Math.sin(e.frame * 0.08) * 40 + Math.cos(e.frame * 0.03) * 20;
