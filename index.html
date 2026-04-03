@@ -186,6 +186,11 @@ let score = 0, highScore = parseInt(localStorage.getItem('msHS') || '0');
 let frameCount = 0, speed = 3, bananaCount = 0;
 let combo = 0, comboTimer = 0, comboMultiplier = 1;
 let currentGap = 160, currentInterval = 100;
+let canRevive = false, revived = false; // Hồi sinh 1 lần/ván
+let slowMoTimer = 0, shakeTimer = 0; // Slow motion + rung khi chết
+let nearRecordShown = false; // "Còn X điểm phá kỷ lục"
+let milestones = [10, 25, 50, 100]; // Milestone unlock
+let milestoneUnlocked = JSON.parse(localStorage.getItem('msMilestones') || '[]');
 
 const mk = { x: 80, y: GH / 2, w: 40, h: 40, vel: 0, grav: 0.45, jmp: -8, rot: 0 };
 let obs = [], bans = [], enemies = [], powerups = [], parts = [], floatTexts = [];
@@ -591,6 +596,38 @@ function drawScore() {
         ctx.strokeRect(GW / 2 - 50, 85, 100, 6);
     }
 
+    // Near record warning
+    if (highScore > 0 && score >= highScore - 3 && score < highScore && !nearRecordShown) {
+        nearRecordShown = true;
+    }
+    if (nearRecordShown && score < highScore) {
+        const diff = highScore - score;
+        const pulse = 0.7 + Math.sin(frameCount * 0.15) * 0.3;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#FF5722'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+        ctx.fillText(`🔥 Còn ${diff} điểm phá kỷ lục!`, GW / 2, 115);
+        ctx.globalAlpha = 1;
+    }
+    if (score > highScore && score > 0) {
+        const pulse = 0.7 + Math.sin(frameCount * 0.1) * 0.3;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#FFD600'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('🏆 KỶ LỤC MỚI!', GW / 2, 115);
+        ctx.globalAlpha = 1;
+    }
+
+    // Milestone progress
+    let nextMilestone = milestones.find(m => score < m);
+    if (nextMilestone) {
+        const pct = score / nextMilestone;
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(10, GH - 75, GW - 20, 4);
+        ctx.fillStyle = '#FFD600';
+        ctx.fillRect(10, GH - 75, (GW - 20) * pct, 4);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '10px Arial'; ctx.textAlign = 'right';
+        ctx.fillText(`Mục tiêu: ${nextMilestone}`, GW - 10, GH - 78);
+    }
+
     // Theme name
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = '12px Arial'; ctx.textAlign = 'right';
@@ -701,34 +738,105 @@ function drawShop() {
 }
 
 function drawGameOver() {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, GW, GH);
-    ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.roundRect(GW / 2 - 130, 160, 260, 350, 16); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, GW, GH);
+    ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.roundRect(GW / 2 - 140, 130, 280, 420, 16); ctx.fill();
 
-    ctx.fillStyle = '#F44336'; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', GW / 2, 205);
+    ctx.fillStyle = '#F44336'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', GW / 2, 175);
 
-    ctx.fillStyle = '#F5F5F5'; ctx.beginPath(); ctx.roundRect(GW / 2 - 110, 220, 220, 90, 10); ctx.fill();
-    ctx.fillStyle = '#666'; ctx.font = '14px Arial'; ctx.fillText('Điểm', GW / 2, 245);
-    ctx.fillStyle = '#FF9800'; ctx.font = 'bold 36px Arial'; ctx.fillText(score, GW / 2, 285);
+    // Score panel
+    ctx.fillStyle = '#F5F5F5'; ctx.beginPath(); ctx.roundRect(GW / 2 - 120, 190, 240, 80, 10); ctx.fill();
+    ctx.fillStyle = '#666'; ctx.font = '13px Arial'; ctx.fillText('Điểm', GW / 2 - 50, 215);
+    ctx.fillStyle = '#FF9800'; ctx.font = 'bold 32px Arial'; ctx.fillText(score, GW / 2 - 50, 252);
+    ctx.fillStyle = '#666'; ctx.font = '13px Arial'; ctx.fillText('Kỷ lục', GW / 2 + 55, 215);
+    ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 32px Arial'; ctx.fillText(highScore, GW / 2 + 55, 252);
 
-    ctx.fillStyle = '#666'; ctx.font = '14px Arial'; ctx.fillText('Kỷ lục', GW / 2, 335);
-    ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 22px Arial'; ctx.fillText(highScore, GW / 2, 362);
+    // Divider
+    ctx.fillStyle = '#E0E0E0'; ctx.fillRect(GW / 2, 200, 1, 60);
 
-    ctx.fillStyle = '#FFD600'; ctx.font = '14px Arial'; ctx.fillText(`🍌 +${bananaCount}`, GW / 2, 390);
-    ctx.fillStyle = '#999'; ctx.font = '12px Arial'; ctx.fillText(`Tổng: ${totalBananas}`, GW / 2, 408);
+    // Banana earned
+    ctx.fillStyle = '#FFD600'; ctx.font = 'bold 16px Arial';
+    ctx.fillText(`🍌 +${bananaCount}`, GW / 2, 295);
+    ctx.fillStyle = '#999'; ctx.font = '12px Arial';
+    ctx.fillText(`Tổng: ${totalBananas}`, GW / 2, 315);
 
+    // New record
     if (score >= highScore && score > 0) {
-        ctx.fillStyle = '#F44336'; ctx.font = 'bold 14px Arial';
-        ctx.fillText('🎉 KỶ LỤC MỚI! 🎉', GW / 2, 430);
+        ctx.fillStyle = '#F44336'; ctx.font = 'bold 16px Arial';
+        ctx.fillText('🎉 KỶ LỤC MỚI! 🎉', GW / 2, 340);
     }
 
-    // Retry
-    ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.roundRect(GW / 2 - 60, 440, 120, 36, 8); ctx.fill();
-    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial'; ctx.fillText('CHƠI LẠI', GW / 2, 464);
+    // Taunt / motivational text
+    let taunt = '';
+    if (score === 0) taunt = 'Nghiêm túc đi bạn ơi 😂';
+    else if (score < 5) taunt = 'Mới khởi động thôi mà! 💪';
+    else if (score < 15) taunt = 'Khá lắm! Thêm tí nữa! 🔥';
+    else if (score < 30) taunt = 'Wow, pro đấy! 😎';
+    else if (score < 60) taunt = 'Bạn là cao thủ! 🏆';
+    else taunt = 'HUYỀN THOẠI! 👑';
 
-    // Share
-    ctx.fillStyle = '#2196F3'; ctx.beginPath(); ctx.roundRect(GW / 2 - 60, 485, 120, 32, 8); ctx.fill();
-    ctx.fillStyle = '#FFF'; ctx.font = 'bold 14px Arial'; ctx.fillText('📤 CHIA SẺ', GW / 2, 506);
+    if (score < highScore && highScore > 0) {
+        const diff = highScore - score;
+        if (diff <= 5) taunt = `Thiếu ${diff} điểm nữa thôi! 😤`;
+    }
+
+    ctx.fillStyle = '#666'; ctx.font = '14px Arial';
+    ctx.fillText(taunt, GW / 2, 365);
+
+    // Next milestone
+    let nextM = milestones.find(m => score < m);
+    if (nextM) {
+        ctx.fillStyle = '#9E9E9E'; ctx.font = '12px Arial';
+        ctx.fillText(`Mục tiêu tiếp: ${nextM} điểm = +${nextM}🍌`, GW / 2, 385);
+    }
+
+    // Retry button
+    ctx.fillStyle = '#388E3C'; ctx.beginPath(); ctx.roundRect(GW / 2 - 70, 400, 140, 42, 10); ctx.fill();
+    ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.roundRect(GW / 2 - 70, 398, 140, 40, 10); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 18px Arial'; ctx.fillText('CHƠI LẠI', GW / 2, 424);
+
+    // Share button
+    ctx.fillStyle = '#1976D2'; ctx.beginPath(); ctx.roundRect(GW / 2 - 70, 450, 140, 34, 8); ctx.fill();
+    ctx.fillStyle = '#2196F3'; ctx.beginPath(); ctx.roundRect(GW / 2 - 70, 449, 140, 33, 8); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 14px Arial'; ctx.fillText('📤 CHIA SẺ THÁCH BẠN BÈ', GW / 2, 471);
+
+    // Menu button
+    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.roundRect(GW / 2 - 40, 495, 80, 26, 6); ctx.fill();
+    ctx.fillStyle = '#999'; ctx.font = '12px Arial'; ctx.fillText('🏠 Menu', GW / 2, 513);
+}
+
+function drawRevive() {
+    // Dim background
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, GW, GH);
+
+    // Panel
+    ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.roundRect(GW / 2 - 130, 200, 260, 250, 16); ctx.fill();
+
+    // Skull icon
+    ctx.font = '50px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('💀', GW / 2, 270);
+
+    // Text
+    ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial';
+    ctx.fillText('Bạn đã chết!', GW / 2, 310);
+
+    ctx.fillStyle = '#666'; ctx.font = '14px Arial';
+    ctx.fillText(`Điểm hiện tại: ${score}`, GW / 2, 340);
+
+    if (highScore > 0 && score >= highScore - 3) {
+        ctx.fillStyle = '#FF5722'; ctx.font = 'bold 13px Arial';
+        ctx.fillText(`Còn ${Math.max(0, highScore - score)} điểm phá kỷ lục!`, GW / 2, 360);
+    }
+
+    // Revive button (green)
+    ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.roundRect(GW / 2 - 100, 378, 200, 40, 8); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
+    ctx.fillText('🎬 XEM VIDEO ĐỂ HỒI SINH', GW / 2, 404);
+
+    // Skip button
+    ctx.fillStyle = '#F44336'; ctx.beginPath(); ctx.roundRect(GW / 2 - 60, 428, 120, 30, 6); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 13px Arial';
+    ctx.fillText('BỎ QUA', GW / 2, 448);
 }
 
 // ===== GAME LOGIC =====
@@ -811,6 +919,8 @@ function reset() {
     frameCount = 0; combo = 0; comboTimer = 0; comboMultiplier = 1;
     currentGap = 160; currentInterval = 100;
     currentThemeIdx = 0;
+    canRevive = false; revived = false; slowMoTimer = 0; shakeTimer = 0;
+    nearRecordShown = false;
 }
 
 function jump() {
@@ -896,13 +1006,47 @@ function update() {
     gX += speed;
 
     checkBan();
+
+    // Milestone check
+    milestones.forEach(m => {
+        if (score === m && !milestoneUnlocked.includes(m)) {
+            milestoneUnlocked.push(m);
+            localStorage.setItem('msMilestones', JSON.stringify(milestoneUnlocked));
+            floatTexts.push({ x: GW / 2, y: GH / 2 - 50, text: `🎉 Milestone ${m}!`, color: '#FFD600', size: 24, life: 2 });
+            // Bonus bananas
+            bananaCount += m;
+            floatTexts.push({ x: GW / 2, y: GH / 2 - 20, text: `+${m} 🍌`, color: '#FF9800', size: 18, life: 1.5 });
+            sfxPowerUp();
+        }
+    });
+
+    // Slow motion countdown
+    if (slowMoTimer > 0) {
+        slowMoTimer--;
+        return; // Pause game during slow-mo
+    }
+
     if (checkCol()) {
-        gameState = 'gameover';
-        sfxHit(); stopBGM();
-        totalBananas += bananaCount;
-        localStorage.setItem('msTB', totalBananas + '');
-        if (score > highScore) { highScore = score; localStorage.setItem('msHS', highScore + ''); }
-        spawnP(mk.x + mk.w / 2, mk.y + mk.h / 2, '#F44336', 15);
+        // Screen shake
+        shakeTimer = 15;
+        sfxHit();
+
+        if (!revived) {
+            // Offer revive
+            canRevive = true;
+            revived = true;
+            gameState = 'revive';
+            slowMoTimer = 0;
+            stopBGM();
+        } else {
+            // Actually die
+            gameState = 'gameover';
+            stopBGM();
+            totalBananas += bananaCount;
+            localStorage.setItem('msTB', totalBananas + '');
+            if (score > highScore) { highScore = score; localStorage.setItem('msHS', highScore + ''); }
+            spawnP(mk.x + mk.w / 2, mk.y + mk.h / 2, '#F44336', 20);
+        }
     }
 }
 
@@ -913,12 +1057,31 @@ function render() {
     if (gameState === 'menu') { drawMenu(); return; }
     if (gameState === 'shop') { drawShop(); return; }
 
+    // Screen shake
+    ctx.save();
+    if (shakeTimer > 0) {
+        shakeTimer--;
+        const sx = (Math.random() - 0.5) * shakeTimer * 1.5;
+        const sy = (Math.random() - 0.5) * shakeTimer * 1.5;
+        ctx.translate(sx, sy);
+    }
+
     drawSky(); drawParallax(); drawClouds();
     obs.forEach(o => drawTree(o.x, o.th, o.by));
     bans.forEach(b => { if (!b.col) drawBanana(b.x, b.y, b.s); });
     powerups.forEach(p => drawPowerUpItem(p));
     enemies.forEach(e => drawEnemy(e));
     drawGround(); drawMonkey(); drawParts(); drawFloatTexts(); drawScore();
+
+    // Red flash when hit
+    if (shakeTimer > 10) {
+        ctx.fillStyle = `rgba(255,0,0,${shakeTimer * 0.02})`;
+        ctx.fillRect(0, 0, GW, GH);
+    }
+
+    ctx.restore();
+
+    if (gameState === 'revive') drawRevive();
     if (gameState === 'gameover') drawGameOver();
 }
 
@@ -959,14 +1122,35 @@ function handleTap(tx, ty) {
                 }
             }
         });
+    } else if (gameState === 'revive') {
+        // Revive button
+        if (y > 378 && y < 418 && x > GW / 2 - 100 && x < GW / 2 + 100) {
+            // Hồi sinh! (sau này sẽ là xem quảng cáo)
+            gameState = 'playing';
+            mk.y = GH / 2; mk.vel = 0;
+            activePower = { type: 'golden', timer: 120 }; // Bất tử 2s sau hồi sinh
+            startBGM();
+            sfxPowerUp();
+            floatTexts.push({ x: GW / 2, y: GH / 2, text: '💪 HỒI SINH!', color: '#4CAF50', size: 24, life: 1.5 });
+            return;
+        }
+        // Skip button
+        if (y > 428 && y < 458) {
+            gameState = 'gameover';
+            totalBananas += bananaCount;
+            localStorage.setItem('msTB', totalBananas + '');
+            if (score > highScore) { highScore = score; localStorage.setItem('msHS', highScore + ''); }
+            spawnP(mk.x + mk.w / 2, mk.y + mk.h / 2, '#F44336', 20);
+            return;
+        }
     } else if (gameState === 'playing') {
         // Sound toggle
         if (x > GW - 45 && y < 45) { sfxEnabled = !sfxEnabled; return; }
         jump();
     } else if (gameState === 'gameover') {
-        if (y > 440 && y < 476) { jump(); return; }
-        if (y > 485 && y < 517) { shareScore(); return; }
-        if (y > 520) jump();
+        if (y > 398 && y < 438) { jump(); return; } // Chơi lại
+        if (y > 449 && y < 482) { shareScore(); return; } // Chia sẻ
+        if (y > 495 && y < 521) { gameState = 'menu'; return; } // Menu
     }
 }
 
