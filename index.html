@@ -279,10 +279,10 @@ let nameError = ''; // Lỗi khi nhập tên trùng
 let nameChecking = false; // Đang kiểm tra tên
 
 function fetchLeaderboard() {
-    fetch(`${FB_URL}/leaderboard.json?orderBy="score"&limitToLast=50`)
+    fetch(`${FB_URL}/leaderboard.json`)
         .then(r => r.json())
         .then(data => {
-            if (!data) { leaderboard = []; return; }
+            if (!data) { leaderboard = []; myRank = 0; return; }
             leaderboard = Object.values(data).sort((a, b) => b.score - a.score).slice(0, 50);
             myRank = leaderboard.findIndex(e => e.id === playerId) + 1;
         }).catch(() => {});
@@ -2794,6 +2794,7 @@ function handleTap(tx, ty) {
             totalBananas += bananaCount;
             localStorage.setItem('msTB', totalBananas + '');
             if (score > highScore) { highScore = score; localStorage.setItem('msHS', highScore + ''); }
+            if (playerName && score > 0) { submitScore(playerName, score); }
             spawnP(mk.x + mk.w / 2, mk.y + mk.h / 2, '#F44336', 20);
             return;
         }
