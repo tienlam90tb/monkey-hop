@@ -271,8 +271,12 @@ function getSkin() { return skins.find(s => s.id === currentSkin) || skins[0]; }
 // ===== FIREBASE LEADERBOARD =====
 const FB_URL = 'https://monkey-hop-6b1b2-default-rtdb.asia-southeast1.firebasedatabase.app';
 let playerName = localStorage.getItem('msName') || '';
-let leaderboard = []; // [{name, score}]
+let playerId = localStorage.getItem('msId') || '';
+if (!playerId) { playerId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); localStorage.setItem('msId', playerId); }
+let leaderboard = [];
 let myRank = 0;
+let nameError = ''; // Lỗi khi nhập tên trùng
+let nameChecking = false; // Đang kiểm tra tên
 
 function fetchLeaderboard() {
     fetch(`${FB_URL}/leaderboard.json?orderBy="score"&limitToLast=50`)
@@ -280,47 +284,49 @@ function fetchLeaderboard() {
         .then(data => {
             if (!data) { leaderboard = []; return; }
             leaderboard = Object.values(data).sort((a, b) => b.score - a.score).slice(0, 50);
-            myRank = leaderboard.findIndex(e => e.name === playerName) + 1;
+            myRank = leaderboard.findIndex(e => e.id === playerId) + 1;
         }).catch(() => {});
 }
 
-function submitScore(name, sc) {
-    // Chỉ submit nếu cao hơn điểm cũ của mình
-    fetch(`${FB_URL}/leaderboard.json?orderBy="name"&equalTo="${encodeURIComponent(name)}"`)
+function checkNameAvailable(name, callback) {
+    nameChecking = true;
+    nameError = '';
+    fetch(`${FB_URL}/users.json`)
         .then(r => r.json())
         .then(data => {
-            if (data) {
-                const entries = Object.entries(data);
-                const existing = entries.find(([k, v]) => v.name === name);
-                if (existing && existing[1].score >= sc) return; // Điểm cũ cao hơn
-                if (existing) {
-                    // Update
-                    fetch(`${FB_URL}/leaderboard/${existing[0]}.json`, {
-                        method: 'PATCH', body: JSON.stringify({ score: sc })
-                    });
-                    return;
-                }
+            nameChecking = false;
+            if (!data) { callback(true); return; }
+            const taken = Object.values(data).find(u => u.name.toLowerCase() === name.toLowerCase() && u.id !== playerId);
+            if (taken) {
+                nameError = isVN ? 'Tên này đã có người dùng!' : 'Name already taken!';
+                callback(false);
+            } else {
+                callback(true);
             }
-            // Thêm mới
-            fetch(`${FB_URL}/leaderboard.json`, {
-                method: 'POST',
-                body: JSON.stringify({ name, score: sc, date: new Date().toISOString().slice(0, 10) })
-            });
-        }).catch(() => {
-            // Fallback: thêm mới luôn
-            fetch(`${FB_URL}/leaderboard.json`, {
-                method: 'POST',
-                body: JSON.stringify({ name, score: sc, date: new Date().toISOString().slice(0, 10) })
-            });
-        });
+        }).catch(() => { nameChecking = false; callback(true); });
+}
+
+function registerName(name) {
+    // Lưu username vào Firebase users
+    fetch(`${FB_URL}/users/${playerId}.json`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, id: playerId })
+    });
+}
+
+function submitScore(name, sc) {
+    fetch(`${FB_URL}/leaderboard/${playerId}.json`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, id: playerId, score: sc, date: new Date().toISOString().slice(0, 10) })
+    }).then(() => setTimeout(fetchLeaderboard, 1000));
 }
 
 // Fetch leaderboard khi load
 fetchLeaderboard();
-setInterval(fetchLeaderboard, 15000); // Refresh mỗi 15s
+setInterval(fetchLeaderboard, 15000);
 
 // ===== GAME STATE =====
-let gameState = playerName ? 'menu' : 'enterName'; // Lần đầu nhập tên
+let gameState = playerName ? 'menu' : 'enterName';
 let score = 0, highScore = parseInt(localStorage.getItem('msHS') || '0');
 let frameCount = 0, speed = 3, bananaCount = 0;
 let combo = 0, comboTimer = 0, comboMultiplier = 1;
@@ -1985,46 +1991,67 @@ function drawEnterName() {
 
     // Panel
     ctx.fillStyle = '#FFF';
-    ctx.beginPath(); ctx.roundRect(GW / 2 - 140, 180, 280, 280, 16); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 140, 170, 280, 320, 16); ctx.fill();
 
     // Monkey icon
     ctx.font = '50px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('🐒', GW / 2, 240);
+    ctx.fillText('🐒', GW / 2, 230);
 
     // Title
     ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial';
-    ctx.fillText(lang.enterNameTitle, GW / 2, 280);
+    ctx.fillText(lang.enterNameTitle, GW / 2, 270);
 
     // Hint
     ctx.fillStyle = '#999'; ctx.font = '13px Arial';
-    ctx.fillText(lang.enterNameHint, GW / 2, 305);
+    ctx.fillText(lang.enterNameHint, GW / 2, 295);
+    ctx.fillText(isVN ? '(Mỗi tên là duy nhất)' : '(Must be unique)', GW / 2, 312);
 
     // Input box
-    ctx.fillStyle = '#F5F5F5'; ctx.strokeStyle = '#4CAF50'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(GW / 2 - 100, 320, 200, 40, 8); ctx.fill(); ctx.stroke();
+    const hasError = nameError.length > 0;
+    ctx.fillStyle = '#F5F5F5';
+    ctx.strokeStyle = hasError ? '#F44336' : '#4CAF50';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 100, 325, 200, 40, 8); ctx.fill(); ctx.stroke();
 
     // Player name text
     ctx.fillStyle = playerName ? '#333' : '#BDBDBD';
     ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(playerName || '...', GW / 2, 346);
+    ctx.fillText(playerName || '...', GW / 2, 351);
+
+    // Error message
+    if (nameError) {
+        ctx.fillStyle = '#F44336'; ctx.font = 'bold 12px Arial';
+        ctx.fillText(nameError, GW / 2, 382);
+    }
+
+    // Checking indicator
+    if (nameChecking) {
+        ctx.fillStyle = '#FF9800'; ctx.font = '12px Arial';
+        ctx.fillText(isVN ? 'Đang kiểm tra...' : 'Checking...', GW / 2, 382);
+    }
 
     // Cursor blink
     if (Math.floor(frameCount / 30) % 2 === 0 && playerName.length < 12) {
+        ctx.font = 'bold 18px Arial';
         const tw = ctx.measureText(playerName).width;
-        ctx.fillStyle = '#4CAF50';
-        ctx.fillRect(GW / 2 + tw / 2 + 3, 328, 2, 22);
+        ctx.fillStyle = hasError ? '#F44336' : '#4CAF50';
+        ctx.fillRect(GW / 2 + tw / 2 + 3, 333, 2, 22);
     }
 
-    // Start button
-    const canStart = playerName.length >= 2;
-    ctx.fillStyle = canStart ? '#4CAF50' : '#BDBDBD';
-    ctx.beginPath(); ctx.roundRect(GW / 2 - 80, 380, 160, 42, 10); ctx.fill();
-    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
-    ctx.fillText(lang.enterNameBtn, GW / 2, 407);
-
     // Name length
-    ctx.fillStyle = '#CCC'; ctx.font = '11px Arial';
-    ctx.fillText(`${playerName.length}/12`, GW / 2 + 80, 355);
+    ctx.fillStyle = '#CCC'; ctx.font = '11px Arial'; ctx.textAlign = 'right';
+    ctx.fillText(`${playerName.length}/12`, GW / 2 + 95, 360);
+
+    // Start button
+    const canStart = playerName.length >= 2 && !nameChecking && !nameError;
+    ctx.fillStyle = canStart ? '#4CAF50' : '#BDBDBD';
+    ctx.beginPath(); ctx.roundRect(GW / 2 - 80, 395, 160, 42, 10); ctx.fill();
+    ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(lang.enterNameBtn, GW / 2, 422);
+
+    // Allowed chars hint
+    ctx.fillStyle = '#CCC'; ctx.font = '10px Arial';
+    ctx.fillText(isVN ? 'Chữ cái, số, gạch dưới' : 'Letters, numbers, underscore', GW / 2, 452);
 }
 
 function drawLeaderboard() {
@@ -2059,7 +2086,7 @@ function drawLeaderboard() {
             const ry = startY + 32 + i * 26;
             if (ry > GH - 100) return;
 
-            const isMe = entry.name === playerName;
+            const isMe = entry.id === playerId;
 
             // Row bg
             if (isMe) {
@@ -2698,17 +2725,27 @@ function handleTap(tx, ty) {
 
     if (gameState === 'enterName') {
         // Bấm vào input box -> mở bàn phím
-        if (y > 320 && y < 360) {
-            const name = prompt(isVN ? 'Nhập tên của bạn (2-12 ký tự):' : 'Enter your name (2-12 chars):', playerName);
-            if (name && name.trim().length >= 2) {
-                playerName = name.trim().slice(0, 12);
-                localStorage.setItem('msName', playerName);
+        if (y > 325 && y < 365) {
+            const name = prompt(isVN ? 'Nhập username (2-12 ký tự, chữ/số/gạch dưới):' : 'Enter username (2-12 chars, letters/numbers/_):', playerName);
+            if (name) {
+                // Chỉ cho phép chữ, số, gạch dưới
+                const clean = name.trim().replace(/[^a-zA-Z0-9_À-ỹ]/g, '').slice(0, 12);
+                if (clean.length >= 2) {
+                    playerName = clean;
+                    nameError = '';
+                }
             }
             return;
         }
-        // Start button
-        if (y > 380 && y < 422 && playerName.length >= 2) {
-            gameState = 'menu';
+        // Start button - check trùng tên
+        if (y > 395 && y < 437 && playerName.length >= 2 && !nameChecking) {
+            checkNameAvailable(playerName, (available) => {
+                if (available) {
+                    localStorage.setItem('msName', playerName);
+                    registerName(playerName);
+                    gameState = 'menu';
+                }
+            });
             return;
         }
         return;
@@ -2789,9 +2826,17 @@ function handleTap(tx, ty) {
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); handleTap(e.clientX, e.clientY); });
 document.addEventListener('keydown', e => {
     if (gameState === 'enterName') {
-        if (e.key === 'Backspace') { playerName = playerName.slice(0, -1); return; }
-        if (e.key === 'Enter' && playerName.length >= 2) { localStorage.setItem('msName', playerName); gameState = 'menu'; return; }
-        if (e.key.length === 1 && playerName.length < 12) { playerName += e.key; return; }
+        if (e.key === 'Backspace') { playerName = playerName.slice(0, -1); nameError = ''; return; }
+        if (e.key === 'Enter' && playerName.length >= 2 && !nameChecking) {
+            checkNameAvailable(playerName, (available) => {
+                if (available) { localStorage.setItem('msName', playerName); registerName(playerName); gameState = 'menu'; }
+            });
+            return;
+        }
+        if (e.key.length === 1 && playerName.length < 12 && /[a-zA-Z0-9_À-ỹ]/.test(e.key)) {
+            playerName += e.key; nameError = '';
+            return;
+        }
         return;
     }
     if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); }
